@@ -12,9 +12,6 @@ import java.util.*;
 @Component
 public class CrawlService {
 
-    protected static Set<String> visitedUrls = new HashSet<>();
-    protected List<CrawlResponseBean> crawledPages = new ArrayList<>();
-
     @Autowired private PageService pageService;
 
     public List<CrawlResponseBean> crawl(URL startingUrl, HttpURLConnection connection) {
@@ -23,18 +20,20 @@ public class CrawlService {
         List<String> pageUrls = Optional.ofNullable(content)
                 .map(c -> pageService.getPageUrls(c))
                 .orElseGet(Collections::emptyList);
+        Set<String> visitedUrls = new HashSet<>();
         visitedUrls.add(startingUrl.toString());
+        List<CrawlResponseBean> crawledPages = new ArrayList<>();
         crawledPages.add(new CrawlResponseBeanBuilder()
                 .withUrl(startingUrl.toString())
                 .withCrawledUrls(pageUrls)
                 .build());
         pageUrls.forEach(
-                pageUrl -> crawlPage(pageUrl, subdomain)
+                pageUrl -> crawlPage(pageUrl, subdomain, visitedUrls, crawledPages)
         );
         return crawledPages;
     }
 
-    protected void crawlPage(String pageUrl, String subdomain) {
+    protected void crawlPage(String pageUrl, String subdomain, Set<String> visitedUrls, List<CrawlResponseBean> crawledPages) {
         if (visitedUrls.contains(pageUrl) || !pageService.isSameSubdomain(pageUrl, subdomain)) {
             visitedUrls.add(pageUrl);
             return;
@@ -50,7 +49,7 @@ public class CrawlService {
                 .build();
         crawledPages.add(page);
         foundUrls.forEach(
-                foundUrl -> crawlPage(foundUrl, subdomain)
+                foundUrl -> crawlPage(foundUrl, subdomain, visitedUrls, crawledPages)
         );
     }
 }

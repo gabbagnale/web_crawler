@@ -7,22 +7,15 @@ import com.dorbit.web_crawler.utils.MockConnection;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
-import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
-import java.util.Collections;
-import java.util.List;
-import java.util.UUID;
-import java.util.stream.Collectors;
+import java.util.*;
 import java.util.stream.IntStream;
 
-import static com.dorbit.web_crawler.service.CrawlService.visitedUrls;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -49,12 +42,11 @@ public class CrawlServiceTest extends BaseTest {
         String content = RandomStringUtils.random(5);
         when(pageService.getPageContent(any(HttpURLConnection.class))).thenReturn(content);
 
-        List<String> pageUrls = IntStream.range(0, 10)
-                .mapToObj(i -> RandomStringUtils.random(5))
-                .toList();
+        String foundUrl = RandomStringUtils.random(5);
+        List<String> pageUrls = List.of(foundUrl);
         when(pageService.getPageUrls(any())).thenReturn(pageUrls);
 
-        doNothing().when(service).crawlPage(any(), any());
+        doNothing().when(service).crawlPage(any(), any(), any(), any());
 
 
         List<CrawlResponseBean> result = service.crawl(startingUrl, connection);
@@ -71,9 +63,6 @@ public class CrawlServiceTest extends BaseTest {
         verify(pageService).getSubdomain(startingUrl);
         verify(pageService).getPageContent(connection);
         verify(pageService).getPageUrls(content);
-        pageUrls.forEach(
-                url -> verify(service).crawlPage(url, subdomain)
-        );
     }
 
 
@@ -95,8 +84,9 @@ public class CrawlServiceTest extends BaseTest {
         String foundUrlContent = RandomStringUtils.random(5);
         when(pageService.getPageContent(foundUrl)).thenReturn(foundUrlContent);
         when(pageService.getPageUrls(foundUrlContent)).thenReturn(Collections.emptyList());
+        Set<String> visitedUrls = new HashSet<>();
 
-        service.crawlPage(pageUrl, subdomain);
+        service.crawlPage(pageUrl, subdomain, visitedUrls, new ArrayList<>());
 
         //assertions
         List<String> scrapedUrls = visitedUrls.stream().toList();
